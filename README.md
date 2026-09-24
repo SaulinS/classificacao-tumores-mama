@@ -1,61 +1,59 @@
-# Previsão de Preços de Imóveis: Regressão Linear vs Random Forest
+# Classificação de Tumores de Mama: Regressão Logística vs Random Forest
 
-Projeto de aprendizado de máquina supervisionado que compara um modelo linear com um modelo baseado em árvores na previsão do valor mediano de imóveis na Califórnia.
+Projeto de aprendizado de máquina supervisionado para classificar tumores de mama como malignos ou benignos a partir de medidas extraídas de imagens de exames.
 
 ## Objetivo
 
-Avaliar se o ganho de desempenho do Random Forest Regressor, que modela relações não lineares, compensa a perda de interpretabilidade em relação à Regressão Linear.
+Comparar a Regressão Logística e o Random Forest Classifier em um problema de classificação binária no qual os tipos de erro têm pesos diferentes: deixar de identificar um tumor maligno (falso negativo) é muito mais grave do que um alarme falso.
 
 ## Dataset
 
-**California Housing** (censo americano de 1990), disponível no scikit-learn.
+**Breast Cancer Wisconsin (Diagnostic)**, disponível no scikit-learn.
 
-- 20.640 registros, cada um representando um bloco censitário
-- 8 variáveis: renda mediana, idade das casas, média de cômodos e quartos, população, ocupação média, latitude e longitude
-- Alvo: valor mediano das casas, em centenas de milhares de dólares
+- 569 exames, sendo 212 malignos e 357 benignos
+- 30 variáveis numéricas calculadas a partir dos núcleos das células (raio, textura, perímetro, área, suavidade, concavidade, entre outras)
 
 ## Metodologia
 
-1. Análise exploratória: distribuição do alvo, correlações e distribuição geográfica dos preços
-2. Divisão treino/teste (80/20) com semente fixa
-3. Baseline que prevê sempre a média, como referência mínima
-4. Regressão Linear em pipeline com padronização (`StandardScaler`), evitando vazamento de dados
-5. Random Forest Regressor com 200 árvores
-6. Validação cruzada com 5 folds para verificar a estabilidade dos resultados
-7. Comparação por MAE, RMSE e R², análise de resíduos e verificação de overfitting
+1. Análise exploratória, com atenção ao desbalanceamento das classes
+2. Divisão treino/teste estratificada (80/20)
+3. Regressão Logística em pipeline com padronização
+4. Random Forest Classifier com 200 árvores
+5. Avaliação por acurácia, precisão, recall, F1 e ROC AUC, com foco no recall
+6. Matriz de confusão e curva ROC
+7. Validação cruzada estratificada com 5 folds
+8. Comparação entre coeficientes da Regressão Logística e importância das variáveis no Random Forest
 
 ## Resultados
 
-Métricas no conjunto de teste (4.128 blocos censitários, 20% dos dados). O alvo está em centenas de milhares de dólares.
+Métricas no conjunto de teste (114 exames, sendo 42 malignos). A classe positiva é **maligno**.
 
-| Modelo | MAE | RMSE | R² |
-|---|---|---|---|
-| Baseline (média) | 0,906 | 1,145 | 0,000 |
-| Regressão Linear | 0,533 | 0,746 | 0,576 |
-| **Random Forest** | **0,327** | **0,504** | **0,806** |
+| Modelo | Acurácia | Precisão | Recall | F1 | ROC AUC |
+|---|---|---|---|---|---|
+| **Regressão Logística** | 0,965 | 0,975 | **0,929** | **0,951** | **0,996** |
+| Random Forest | 0,965 | **1,000** | 0,905 | 0,950 | 0,994 |
 
-Validação cruzada com 5 folds nos dados de treino:
+Erros de cada modelo no teste:
 
-| Modelo | RMSE médio | R² médio |
+| Modelo | Falsos negativos (malignos não detectados) | Falsos positivos (alarmes falsos) |
 |---|---|---|
-| Regressão Linear | 0,721 ± 0,014 | 0,611 ± 0,012 |
-| Random Forest | 0,510 ± 0,012 | 0,806 ± 0,006 |
+| Regressão Logística | 3 | 1 |
+| Random Forest | 4 | 0 |
 
-Verificação de overfitting (R² no treino vs no teste):
+Validação cruzada estratificada com 5 folds nos dados de treino:
 
-| Modelo | R² treino | R² teste | Diferença |
-|---|---|---|---|
-| Regressão Linear | 0,613 | 0,576 | 0,037 |
-| Random Forest | 0,974 | 0,806 | 0,168 |
+| Modelo | Recall médio | F1 médio |
+|---|---|---|
+| Regressão Logística | 0,953 ± 0,040 | 0,964 ± 0,021 |
+| Random Forest | 0,935 ± 0,039 | 0,949 ± 0,021 |
 
 ## Principais conclusões
 
-- **Os dois modelos aprenderam com os dados.** Ambos ficaram bem abaixo do erro do baseline, que prevê sempre a média (RMSE de 1,145).
-- **O Random Forest foi claramente superior.** Ele reduziu o RMSE em 32,4% em relação à Regressão Linear e explicou cerca de 81% da variação dos preços, contra 58%. Na prática, o erro médio absoluto caiu de cerca de US$ 53 mil para US$ 33 mil por bloco.
-- **A diferença não foi sorte da divisão treino/teste.** Na validação cruzada, os dois modelos mantiveram desempenho parecido com o do teste e desvio padrão baixo, o que indica resultados estáveis.
-- **O ganho vem da capacidade de modelar relações não lineares.** O preço depende da localização de forma complexa (latitude e longitude combinadas), algo que uma soma ponderada de variáveis não consegue representar.
-- **O Random Forest se ajusta bastante aos dados de treino** (R² de 0,974 no treino contra 0,806 no teste). Como o desempenho no teste e na validação cruzada continua alto, o modelo generaliza bem, mas há espaço para regularizar as árvores com `max_depth` ou `min_samples_leaf`.
-- **A Regressão Linear continua útil pela interpretabilidade:** seus coeficientes mostram a direção e a intensidade do efeito de cada variável, o que o Random Forest não oferece diretamente.
+- **A acurácia sozinha esconderia a diferença entre os modelos.** Os dois acertaram 96,5% dos exames, mas cometeram tipos de erro diferentes.
+- **A Regressão Logística é a escolha mais adequada para este problema.** Ela deixou passar 3 tumores malignos, contra 4 do Random Forest. Como um falso negativo é o erro mais grave num diagnóstico, o recall maior pesa mais que a precisão perfeita do Random Forest, que não deu nenhum alarme falso.
+- **A vantagem se manteve na validação cruzada,** com recall médio de 95,3% contra 93,5%. Como a diferença é menor que o desvio padrão entre os folds, os dois modelos são próximos, e a escolha se apoia também na simplicidade e na interpretabilidade da Regressão Logística.
+- **Os dois modelos separam muito bem as classes** (ROC AUC acima de 0,99). Isso indica que baixar o limiar de decisão, hoje em 0,5, poderia aumentar o recall aceitando alguns alarmes falsos a mais, uma troca razoável neste contexto.
+- **Um modelo mais simples pode ser a melhor escolha.** Com variáveis que já separam bem as classes, a Regressão Logística teve desempenho equivalente ou melhor que o Random Forest, com a vantagem de mostrar, pelo sinal de cada coeficiente, se uma medida aumenta ou diminui a chance de o tumor ser maligno.
 
 ## Tecnologias
 
@@ -64,19 +62,21 @@ Python · pandas · NumPy · scikit-learn · matplotlib · seaborn
 ## Como executar
 
 ```bash
-git clone https://github.com/SaulinS/regressao-imoveis-california.git
-cd regressao-imoveis-california
+git clone https://github.com/SaulinS/classificacao-tumores-mama.git
+cd classificacao-tumores-mama
 pip install -r requirements.txt
-jupyter notebook regressao_linear_vs_random_forest.ipynb
+jupyter notebook classificacao_tumores.ipynb
 ```
 
-Na primeira execução, o scikit-learn baixa o dataset automaticamente (é preciso estar conectado à internet).
+Também funciona no Google Colab sem instalar nada: basta fazer upload do notebook e executar todas as células. O dataset já vem incluído no scikit-learn.
 
 ## Próximos passos
 
+- Ajustar o limiar de decisão para priorizar o recall
 - Ajuste de hiperparâmetros com `GridSearchCV`
-- Modelos de gradient boosting (XGBoost, LightGBM)
-- Interpretação das previsões com SHAP
+- Testar SVM e gradient boosting
+
+> Projeto de estudo com dataset público. Não substitui diagnóstico médico.
 
 ## Autor
 
